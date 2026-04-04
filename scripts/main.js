@@ -115,11 +115,19 @@ function calcQualityEdgeBonus(actor, attrib) {
  * tracking of edge already gained.
  */
 function getMaxEdgeGainRemaining(actor) {
-  let max = game.settings.get(SYSTEM_NAME, "maxEdgePerRound");
+  let max;
+  try {
+    max = game.settings.get(SYSTEM_NAME, "maxEdgePerRound");
+  } catch (e) {
+    // Setting may not exist in this version of the system
+  }
   const combat = game.combat;
   if (combat && typeof combat.getMaxEdgeGain === "function") {
-    max = combat.getMaxEdgeGain(actor);
+    const combatMax = combat.getMaxEdgeGain(actor);
+    if (Number.isFinite(combatMax)) max = combatMax;
   }
+  // Fallback: SR6 default is 2 edge gain per round
+  if (!Number.isFinite(max)) max = 2;
   return max;
 }
 
