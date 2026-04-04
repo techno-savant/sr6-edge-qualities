@@ -3,6 +3,9 @@
   "title": "SR6 Edge Qualities",
   "description": "Adds Analytical Mind and Attribute Mastery quality support for Shadowrun 6th Edition (Eden). These qualities grant +1 edge when rolling tests linked to their associated attribute, respecting per-round edge caps.",
   "version": "1.0.0",
+  "url": "https://github.com/techno-savant/sr6-edge-qualities",
+  "manifest": "https://raw.githubusercontent.com/techno-savant/sr6-edge-qualities/main/module.json",
+  "download": "https://github.com/techno-savant/sr6-edge-qualities/archive/refs/tags/v1.0.0.zip",
   "authors": [
     {
       "name": "jcmurray"
