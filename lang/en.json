@@ -1,0 +1,21 @@
+{
+  "sr6eq.title": "SR6 Edge Qualities",
+  "sr6eq.edgeBonus": "+{value} edge from {quality}",
+  "sr6eq.analyticalMind": "Analytical Mind",
+  "sr6eq.attributeMastery": "Attribute Mastery",
+  "sr6eq.configTitle": "Configure Attribute Mastery",
+  "sr6eq.selectAttribute": "Select Attribute",
+  "sr6eq.capped": "capped by per-round limit",
+  "sr6eq.cappedByRound": "not awarded — per-round edge limit reached",
+  "sr6eq.cappedBy7": "not awarded — already at maximum edge (7)",
+  "sr6eq.noMatch": "no bonus — roll does not use a matching attribute",
+  "sr6eq.noAttributeSet": "No attribute configured for Attribute Mastery. Right-click the quality to configure.",
+  "sr6eq.attrib.bod": "Body",
+  "sr6eq.attrib.agi": "Agility",
+  "sr6eq.attrib.rea": "Reaction",
+  "sr6eq.attrib.str": "Strength",
+  "sr6eq.attrib.wil": "Willpower",
+  "sr6eq.attrib.log": "Logic",
+  "sr6eq.attrib.int": "Intuition",
+  "sr6eq.attrib.cha": "Charisma"
+}
