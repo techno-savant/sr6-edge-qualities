@@ -110,6 +110,15 @@ function calcQualityEdgeBonus(actor, attrib) {
 }
 
 /**
+ * The update path of an actor's current Edge. V2 (DataModel) actors store it at `system.edge.current`; `edge.value` is only
+ * a compatibility getter there. Legacy actors (Eden 3.3.9, 4.x Player/NPC) keep `system.edge.value`. Same rule as Eden's own
+ * `edgeUpdate` (module/util/edge.mjs), which a module cannot import, so it is repeated here.
+ */
+function edgePath(actor) {
+  return actor?.isActorV2 ? "system.edge.current" : "system.edge.value";
+}
+
+/**
  * Get the maximum edge the actor can still gain this round, respecting the
  * system's maxEdgePerRound setting and the combat tracker's per-combatant
  * tracking of edge already gained.
@@ -428,22 +437,19 @@ Hooks.once("init", () => {
 Hooks.once("ready", async () => {
   console.log(`${MODULE_ID} | Ready`);
 
-  // Populate compendium with quality items
-  await populateCompendium();
-
-  // Hook into all possible render hooks for the SR6 RollDialog.
-  // Foundry fires render{ClassName} for each class in the hierarchy.
-  for (const hookName of [
-    "renderRollDialog",
-    "renderDialog",
-    "renderApplication",
-  ]) {
-    Hooks.on(hookName, (app, html, data) => {
-      if (app._sr6eq_patched) return;
-      console.log(`${MODULE_ID} | ${hookName} fired for`, app.constructor.name);
-      onRenderDialog(app, html, data);
-    });
+  // Populate compendium with quality items. A failure here (a locked or missing pack) must not stop the hooks below.
+  try {
+    await populateCompendium();
+  } catch (error) {
+    console.error(`${MODULE_ID} | Could not populate the compendium`, error);
   }
+
+  // Eden's RollDialog is an Application v1 Dialog subclass; Foundry fires render<ClassName> for it. The generic
+  // renderDialog / renderApplication hooks fire for every dialog and window, so they are not used.
+  Hooks.on("renderRollDialog", (app, html, data) => {
+    if (app._sr6eq_patched) return;
+    onRenderDialog(app, html, data);
+  });
 });
 
 // Hook into actor sheet rendering for Attribute Mastery configuration
@@ -518,13 +524,13 @@ Hooks.on("createChatMessage", async (message, options, userId) => {
 
   // Award edge to actor
   const newEdge = Math.min(7, actorEdge + applied);
-  await actor.update({ "system.edge.value": newEdge });
+  await actor.update({ [edgePath(actor)]: newEdge });
   console.log(`${MODULE_ID} | Awarded ${applied} edge to ${actor.name} (${actorEdge} → ${newEdge})`);
 
   // Track in combat if active
   const combat = game.combat;
   if (combat) {
-    const combatant = combat.getCombatantByActor(actorId);
+    const combatant = combat.getCombatantsByActor(actorId)?.[0];
     if (combatant) {
       combatant.edgeGained = (combatant.edgeGained || 0) + applied;
     }
@@ -542,7 +548,7 @@ Hooks.on("createChatMessage", async (message, options, userId) => {
 });
 
 // ── Annotate roll chat cards with triggering quality name ─────────────
-Hooks.on("renderChatMessage", (message, html, data) => {
+Hooks.on("renderChatMessageHTML", (message, html) => {
   const roll = message.rolls?.[0];
   if (!roll?.configured) return;
 
@@ -560,11 +566,14 @@ Hooks.on("renderChatMessage", (message, html, data) => {
 
   const activeNames = bonus.sources.map((s) => s.quality).join(", ");
 
-  // Append quality name centered at the bottom of the card
-  const content = html.find(".message-content").first();
-  if (content.length && !content.find(".sr6eq-quality-label").length) {
-    content.append(
-      `<div class="sr6eq-quality-label" style="text-align:center;margin-top:6px;padding-top:4px;border-top:1px solid var(--color-border-light-tertiary, #555);color:var(--highlight-color);font-size:0.9em;">${activeNames}</div>`,
-    );
+  // Append quality name centered at the bottom of the card (html is an HTMLElement since Foundry 13)
+  const content = html.querySelector(".message-content");
+  if (content && !content.querySelector(".sr6eq-quality-label")) {
+    const label = document.createElement("div");
+    label.className = "sr6eq-quality-label";
+    label.style.cssText =
+      "text-align:center;margin-top:6px;padding-top:4px;border-top:1px solid var(--color-border-light-tertiary, #555);color:var(--highlight-color);font-size:0.9em;";
+    label.textContent = activeNames;
+    content.append(label);
   }
 });
