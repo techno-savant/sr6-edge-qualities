@@ -1,0 +1,15 @@
+SR6 Edge Qualities: licence note
+
+Code
+  The code in this repository (scripts/main.js, module.json, lang/) is written by and belongs to jcmurray. It is shared for
+  private use only. No licence is granted to redistribute, sublicense or publish it.
+
+Game content
+  Shadowrun, its rules, qualities, names and artwork are the property of Catalyst Game Labs and Topps, and are used under
+  their own terms. jcmurray does not license that content to anyone. Nothing in this repository gives you rights to it.
+  The two quality items in the module's compendium (Analytical Mind, Attribute Mastery) describe game content;
+  jcmurray claims no rights in that content and grants no licence to it.
+
+Use
+  Private use only. This module is not for public listing, for the Foundry package registry, or for redistribution.
+  It is not affiliated with or endorsed by Catalyst Game Labs, Topps, the Eden system's authors or Foundry Gaming LLC.
