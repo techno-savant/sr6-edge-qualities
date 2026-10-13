@@ -109,6 +109,11 @@ function calcQualityEdgeBonus(actor, attrib) {
   };
 }
 
+/** Escape a value for use inside chat card HTML: quality and actor names are user-editable text. */
+function esc(value) {
+  return foundry.utils.escapeHTML(String(value ?? ""));
+}
+
 /**
  * The update path of an actor's current Edge. V2 (DataModel) actors store it at `system.edge.current`; `edge.value` is only
  * a compatibility getter there. Legacy actors (Eden 3.3.9, 4.x Player/NPC) keep `system.edge.value`. Same rule as Eden's own
@@ -516,7 +521,7 @@ Hooks.on("createChatMessage", async (message, options, userId) => {
       reason = game.i18n.localize("sr6eq.cappedByRound");
     }
     ChatMessage.create({
-      content: `<div class="chat-edge" style="display:block"><div style="color: var(--highlight-color)">${activeNames}</div><div>${reason}</div></div>`,
+      content: `<div class="chat-edge" style="display:block"><div style="color: var(--highlight-color)">${esc(activeNames)}</div><div>${esc(reason)}</div></div>`,
       speaker,
     });
     return;
@@ -542,7 +547,7 @@ Hooks.on("createChatMessage", async (message, options, userId) => {
     quality: activeNames,
   });
   ChatMessage.create({
-    content: `<div class="chat-edge" style="display:block"><div style="color: var(--highlight-color)">${bonusText}</div><div>${actor.name}: ${actorEdge} → ${newEdge}</div></div>`,
+    content: `<div class="chat-edge" style="display:block"><div style="color: var(--highlight-color)">${esc(bonusText)}</div><div>${esc(actor.name)}: ${esc(actorEdge)} → ${esc(newEdge)}</div></div>`,
     speaker,
   });
 });
