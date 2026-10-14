@@ -62,11 +62,27 @@ function getAttributeMasteryAttrib(qualityItem) {
   return qualityItem?.getFlag(MODULE_ID, "attribute") ?? null;
 }
 
+/** Long attribute names (V2 actors) to the short ids this module stores. */
+const LONG_TO_SHORT = {
+  body: "bod", agility: "agi", reaction: "rea", strength: "str",
+  willpower: "wil", logic: "log", intuition: "int", charisma: "cha",
+};
+
+/**
+ * Reduce a roll's attribute to the short id (bod, agi, ... cha). Eden 3.3.9 puts the bare id ("log") in the roll;
+ * Eden 4.x puts a path ("system.attributes.log.pool", or ".logic.pool" on a V2 actor). Both must match.
+ */
+function normalizeAttrib(attrib) {
+  if (typeof attrib !== "string") return null;
+  const id = attrib.replace(/^system\.attributes\./, "").replace(/\.(pool|base|rank|mod|value)$/, "");
+  return LONG_TO_SHORT[id] ?? id;
+}
+
 /**
  * Determine the attribute being used in a roll from the prepared roll data.
  */
 function getRollAttribute(prepared) {
-  return prepared?.attrib ?? null;
+  return normalizeAttrib(prepared?.attrib);
 }
 
 /**
@@ -485,7 +501,7 @@ Hooks.on("createChatMessage", async (message, options, userId) => {
   const actor = game.actors.get(actorId);
   if (!actor) return;
 
-  const attrib = configured.attrib ?? roll.data?.attrib;
+  const attrib = normalizeAttrib(configured.attrib ?? roll.data?.attrib);
   if (!attrib) return;
 
   // Check if the actor has any edge-granting qualities at all
@@ -563,7 +579,7 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
   const actor = game.actors.get(actorId);
   if (!actor) return;
 
-  const attrib = configured.attrib ?? roll.data?.attrib;
+  const attrib = normalizeAttrib(configured.attrib ?? roll.data?.attrib);
   if (!attrib) return;
 
   const bonus = calcQualityEdgeBonus(actor, attrib);
