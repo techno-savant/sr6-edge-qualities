@@ -232,6 +232,8 @@ function applyEdgeBonusToDialog(dialog) {
     if (totalDesired > totalAllowed) {
       edgeLabel.innerText += ` (${game.i18n.localize("sr6eq.capped")})`;
     }
+    // Remember what we wrote, so the label observer can tell our own write from Eden's later rewrite.
+    dialog._sr6eq_lastLabel = edgeLabel.innerText;
   }
 
   // Refresh edge boost dropdown with new edge value
@@ -275,6 +277,18 @@ function onRenderDialog(app, html, data) {
 
   // Apply on initial render
   applyEdgeBonusToDialog(app);
+
+  // Eden binds its own _onCalcEdge before this hook runs (activateListeners: change handlers and html.show(...), which fires after the
+  // show animation), so those calls bypass the wrapper above, rewrite #edgeLabel to "No one gets Edge" and reset configured.edgePlayer
+  // to 0. Watch the label and apply again after every rewrite that is not ours. Eden resets edgePlayer first, so this cannot count twice.
+  const label = app._element?.[0]?.querySelector?.("#edgeLabel");
+  if (label && !app._sr6eq_labelObserver) {
+    app._sr6eq_labelObserver = new MutationObserver(() => {
+      if (label.innerText === app._sr6eq_lastLabel) return;
+      applyEdgeBonusToDialog(app);
+    });
+    app._sr6eq_labelObserver.observe(label, { childList: true, characterData: true, subtree: true });
+  }
 }
 
 /**
@@ -552,11 +566,12 @@ Hooks.on("createChatMessage", async (message, options, userId) => {
   // Track in combat if active
   const combat = game.combat;
   if (combat) {
-    const combatant = combat.getCombatantsByActor(actorId)?.[0];
+    const tracked = combat.getCombatantsByActor(actorId) ?? [];
+    const combatant = tracked[0];
     if (combatant) {
       combatant.edgeGained = (combatant.edgeGained || 0) + applied;
     }
-    console.log(`${MODULE_ID} | Combat tracking: combat ${combat.id}, ${combat.getCombatantsByActor(actorId)?.length ?? 0} combatant(s) for the actor, edgeGained now ${combat.getCombatantsByActor(actorId)?.[0]?.edgeGained}`);
+    console.log(`${MODULE_ID} | Combat tracking: combat ${combat.id}, ${tracked.length} combatant(s) for the actor, edgeGained now ${combatant?.edgeGained}`);
   } else {
     console.log(`${MODULE_ID} | Combat tracking: no viewed combat`);
   }
