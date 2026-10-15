@@ -281,14 +281,41 @@ function onRenderDialog(app, html, data) {
   // Eden binds its own _onCalcEdge before this hook runs (activateListeners: change handlers and html.show(...), which fires after the
   // show animation), so those calls bypass the wrapper above, rewrite #edgeLabel to "No one gets Edge" and reset configured.edgePlayer
   // to 0. Watch the label and apply again after every rewrite that is not ours. Eden resets edgePlayer first, so this cannot count twice.
-  const label = app._element?.[0]?.querySelector?.("#edgeLabel");
-  if (label && !app._sr6eq_labelObserver) {
-    app._sr6eq_labelObserver = new MutationObserver(() => {
-      if (label.innerText === app._sr6eq_lastLabel) return;
+  observeEdgeLabel(app);
+}
+
+/** The #edgeLabel node of a dialog. */
+function edgeLabelOf(app) {
+  return app._element?.[0]?.querySelector?.("#edgeLabel") ?? null;
+}
+
+/**
+ * Observe the dialog's current #edgeLabel node (a re-render replaces the node, so a new observer follows it) and apply the bonus
+ * again after every rewrite that is not ours. The observer is disconnected when the dialog closes.
+ */
+function observeEdgeLabel(app) {
+  const label = edgeLabelOf(app);
+  if (!label || app._sr6eq_observedLabel === label) return;
+  app._sr6eq_labelObserver?.disconnect();
+  const observer = new MutationObserver(() => {
+    const current = edgeLabelOf(app);
+    if (current && current !== app._sr6eq_observedLabel) {
+      observeEdgeLabel(app);
       applyEdgeBonusToDialog(app);
-    });
-    app._sr6eq_labelObserver.observe(label, { childList: true, characterData: true, subtree: true });
-  }
+      return;
+    }
+    if ((current ?? label).innerText === app._sr6eq_lastLabel) return; // our own write
+    applyEdgeBonusToDialog(app);
+  });
+  observer.observe(label, { childList: true, characterData: true, subtree: true });
+  app._sr6eq_labelObserver = observer;
+  app._sr6eq_observedLabel = label;
+}
+
+function onCloseDialog(app) {
+  app._sr6eq_labelObserver?.disconnect();
+  app._sr6eq_labelObserver = null;
+  app._sr6eq_observedLabel = null;
 }
 
 /**
@@ -483,9 +510,13 @@ Hooks.once("ready", async () => {
   // Eden's RollDialog is an Application v1 Dialog subclass; Foundry fires render<ClassName> for it. The generic
   // renderDialog / renderApplication hooks fire for every dialog and window, so they are not used.
   Hooks.on("renderRollDialog", (app, html, data) => {
-    if (app._sr6eq_patched) return;
+    if (app._sr6eq_patched) {
+      observeEdgeLabel(app); // a re-render replaced the label node
+      return;
+    }
     onRenderDialog(app, html, data);
   });
+  Hooks.on("closeRollDialog", onCloseDialog);
 });
 
 // Hook into actor sheet rendering for Attribute Mastery configuration
