@@ -203,8 +203,10 @@ function applyEdgeBonusToDialog(dialog) {
 
   if (applied <= 0) return;
 
-  configured.edgePlayer = totalAllowed;
-  dialog.edge = Math.min(7, actorEdge + configured.edgePlayer);
+  // PREVIEW ONLY. Do not write the bonus into configured.edgePlayer: Eden awards configured.edgePlayer itself when the dialog closes
+  // (Rolls.js _dialogClosed), and this module awards the quality Edge once, from the createChatMessage hook below. Writing it here
+  // as well made every roll pay the bonus twice. This function only shows the number, so it is safe to run any number of times.
+  dialog.edge = Math.min(7, actorEdge + totalAllowed);
 
   // Update display
   const el = dialog._element?.[0];
