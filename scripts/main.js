@@ -1,9 +1,17 @@
 const MODULE_ID = "sr6-edge-qualities";
+
+/**
+ * Diagnostic logging, OFF by default. Turn it on in the browser console with `CONFIG.debug["sr6-edge-qualities"] = true` (resets on reload).
+ * It explains each Edge decision: the roll attribute, the bonus, the caps, and the combat tracking.
+ */
+function debugLog(...args) {
+  if (globalThis.CONFIG?.debug?.[MODULE_ID]) console.log(...args);
+}
 const SYSTEM_NAME = "shadowrun6-eden";
 const ANALYTICAL_MIND_ATTRIB = "log";
 const COMPENDIUM_NAME = "qualities";
 
-console.log(`${MODULE_ID} | Script file loaded`);
+debugLog(`${MODULE_ID} | Script file loaded`);
 
 // Quality identifiers - matches by genesisID or name (case-insensitive)
 const ANALYTICAL_MIND_IDS = ["analytical_mind", "analytischer_verstand"];
@@ -171,19 +179,19 @@ function applyEdgeBonusToDialog(dialog) {
   const prepared = dialog.prepared;
   const configured = dialog.dialogResult;
   if (!actor || !configured?.actor) {
-    console.log(`${MODULE_ID} | applyEdgeBonusToDialog: no actor or configured.actor`);
+    debugLog(`${MODULE_ID} | applyEdgeBonusToDialog: no actor or configured.actor`);
     return;
   }
 
   const attrib = getRollAttribute(prepared);
   if (!attrib) {
-    console.log(`${MODULE_ID} | applyEdgeBonusToDialog: no attrib on prepared roll`);
+    debugLog(`${MODULE_ID} | applyEdgeBonusToDialog: no attrib on prepared roll`);
     return;
   }
 
-  console.log(`${MODULE_ID} | Roll uses attribute: ${attrib}`);
+  debugLog(`${MODULE_ID} | Roll uses attribute: ${attrib}`);
   const bonus = calcQualityEdgeBonus(actor, attrib);
-  console.log(`${MODULE_ID} | Quality edge bonus: ${bonus.total}`, bonus.sources);
+  debugLog(`${MODULE_ID} | Quality edge bonus: ${bonus.total}`, bonus.sources);
   if (bonus.total <= 0) return;
 
   // Read current actor edge from system data
@@ -199,7 +207,7 @@ function applyEdgeBonusToDialog(dialog) {
   const totalDesired = systemGain + bonus.total;
   const totalAllowed = Math.min(totalDesired, perRoundMax, absoluteMax);
   const applied = totalAllowed - systemGain;
-  console.log(`${MODULE_ID} | Edge caps: system gain ${systemGain}, per-round room ${perRoundMax}, room to 7 ${absoluteMax}, allowed ${totalAllowed}, applied ${applied}, dialog element ${dialog._element?.[0] ? "present" : "missing"}`);
+  debugLog(`${MODULE_ID} | Edge caps: system gain ${systemGain}, per-round room ${perRoundMax}, room to 7 ${absoluteMax}, allowed ${totalAllowed}, applied ${applied}, dialog element ${dialog._element?.[0] ? "present" : "missing"}`);
 
   if (applied <= 0) return;
 
@@ -239,10 +247,10 @@ function applyEdgeBonusToDialog(dialog) {
 function onRenderDialog(app, html, data) {
   // Identify SR6 RollDialog by checking for its specific properties
   if (!app.dialogResult || !app.prepared || !app.actor) {
-    console.log(`${MODULE_ID} | onRenderDialog: not an SR6 RollDialog (missing dialogResult/prepared/actor)`, app.constructor.name);
+    debugLog(`${MODULE_ID} | onRenderDialog: not an SR6 RollDialog (missing dialogResult/prepared/actor)`, app.constructor.name);
     return;
   }
-  console.log(`${MODULE_ID} | Detected SR6 RollDialog — patching _onCalcEdge`);
+  debugLog(`${MODULE_ID} | Detected SR6 RollDialog — patching _onCalcEdge`);
 
   // Wrap _onCalcEdge once per dialog instance
   if (!app._sr6eq_patched) {
@@ -469,7 +477,7 @@ async function populateCompendium() {
       if (found) continue;
 
       await Item.create(itemData, { pack: packKey });
-      console.log(
+      debugLog(
         `${MODULE_ID} | Created compendium item: ${itemData.name}`,
       );
     }
@@ -484,11 +492,11 @@ async function populateCompendium() {
 // ── Module initialization ──────────────────────────────────────────────
 
 Hooks.once("init", () => {
-  console.log(`${MODULE_ID} | Initializing SR6 Edge Qualities`);
+  debugLog(`${MODULE_ID} | Initializing SR6 Edge Qualities`);
 });
 
 Hooks.once("ready", async () => {
-  console.log(`${MODULE_ID} | Ready`);
+  debugLog(`${MODULE_ID} | Ready`);
 
   // Populate compendium with quality items. A failure here (a locked or missing pack) must not stop the hooks below.
   try {
@@ -587,7 +595,7 @@ Hooks.on("createChatMessage", async (message, options, userId) => {
   // Award edge to actor
   const newEdge = Math.min(7, actorEdge + applied);
   await actor.update({ [edgePath(actor)]: newEdge });
-  console.log(`${MODULE_ID} | Awarded ${applied} edge to ${actor.name} (${actorEdge} → ${newEdge})`);
+  debugLog(`${MODULE_ID} | Awarded ${applied} edge to ${actor.name} (${actorEdge} → ${newEdge})`);
 
   // Track in combat if active
   const combat = game.combat;
@@ -597,9 +605,9 @@ Hooks.on("createChatMessage", async (message, options, userId) => {
     if (combatant) {
       combatant.edgeGained = (combatant.edgeGained || 0) + applied;
     }
-    console.log(`${MODULE_ID} | Combat tracking: combat ${combat.id}, ${tracked.length} combatant(s) for the actor, edgeGained now ${combatant?.edgeGained}`);
+    debugLog(`${MODULE_ID} | Combat tracking: combat ${combat.id}, ${tracked.length} combatant(s) for the actor, edgeGained now ${combatant?.edgeGained}`);
   } else {
-    console.log(`${MODULE_ID} | Combat tracking: no viewed combat`);
+    debugLog(`${MODULE_ID} | Combat tracking: no viewed combat`);
   }
 
   // Notify in chat using the system's edge message styling
