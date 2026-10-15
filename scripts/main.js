@@ -199,6 +199,7 @@ function applyEdgeBonusToDialog(dialog) {
   const totalDesired = systemGain + bonus.total;
   const totalAllowed = Math.min(totalDesired, perRoundMax, absoluteMax);
   const applied = totalAllowed - systemGain;
+  console.log(`${MODULE_ID} | Edge caps: system gain ${systemGain}, per-round room ${perRoundMax}, room to 7 ${absoluteMax}, allowed ${totalAllowed}, applied ${applied}, dialog element ${dialog._element?.[0] ? "present" : "missing"}`);
 
   if (applied <= 0) return;
 
@@ -555,6 +556,9 @@ Hooks.on("createChatMessage", async (message, options, userId) => {
     if (combatant) {
       combatant.edgeGained = (combatant.edgeGained || 0) + applied;
     }
+    console.log(`${MODULE_ID} | Combat tracking: combat ${combat.id}, ${combat.getCombatantsByActor(actorId)?.length ?? 0} combatant(s) for the actor, edgeGained now ${combat.getCombatantsByActor(actorId)?.[0]?.edgeGained}`);
+  } else {
+    console.log(`${MODULE_ID} | Combat tracking: no viewed combat`);
   }
 
   // Notify in chat using the system's edge message styling
