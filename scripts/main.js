@@ -203,19 +203,12 @@ function applyEdgeBonusToDialog(dialog) {
 
   if (applied <= 0) return;
 
-  // PREVIEW ONLY. Do not write the bonus into configured.edgePlayer: Eden awards configured.edgePlayer itself when the dialog closes
-  // (Rolls.js _dialogClosed), and this module awards the quality Edge once, from the createChatMessage hook below. Writing it here
-  // as well made every roll pay the bonus twice. This function only shows the number, so it is safe to run any number of times.
-  dialog.edge = Math.min(7, actorEdge + totalAllowed);
-
-  // Update display
+  // PREVIEW ONLY, LABEL ONLY. Do not write the bonus into configured.edgePlayer: Eden awards configured.edgePlayer itself when the dialog
+  // closes (Rolls.js _dialogClosed), and this module awards the quality Edge once, from the createChatMessage hook below. Do not touch
+  // dialog.edge, the edge-value text or the boost list either: Edge boosts are offered up to dialog.edge, and the quality Edge is not
+  // paid yet, so a boost costing more than the real Edge would be offered and could drive Edge below 0.
   const el = dialog._element?.[0];
   if (!el) return;
-
-  const edgeValue = el.getElementsByClassName("edge-value")[0];
-  if (edgeValue) {
-    edgeValue.innerText = dialog.edge.toString();
-  }
 
   // Append quality info to edge label
   const edgeLabel = el.querySelector("#edgeLabel");
@@ -238,11 +231,6 @@ function applyEdgeBonusToDialog(dialog) {
     dialog._sr6eq_lastLabel = edgeLabel.innerText;
   }
 
-  // Refresh edge boost dropdown with new edge value
-  const boostSelect = el.getElementsByClassName("edgeBoosts")[0];
-  if (boostSelect && typeof dialog._updateEdgeBoosts === "function") {
-    dialog._updateEdgeBoosts(boostSelect, dialog.edge);
-  }
 }
 
 /**
@@ -569,7 +557,12 @@ Hooks.on("createChatMessage", async (message, options, userId) => {
   // Apply per-round cap
   const perRoundMax = getMaxEdgeGainRemaining(actor);
   const systemGain = configured.edgePlayer || 0;
-  const roomInRound = Math.max(0, perRoundMax - systemGain);
+  // In a started combat where the actor is a combatant, Combat#getMaxEdgeGain is maxEdgePerRound minus combatant.edgeGained, and Eden has
+  // ALREADY added this roll's edgePlayer to edgeGained when the dialog closed: that value is the room left, so subtracting systemGain
+  // again would count Eden's gain twice. Out of combat (or without a combatant) the value is the plain setting: subtract the gain.
+  const trackedCombat = game.combat?.started && (game.combat.getCombatantsByActor?.(actorId)?.length ?? 0) > 0 && typeof game.combat.getMaxEdgeGain === "function"
+    && Number.isFinite(game.combat.getMaxEdgeGain(actor));
+  const roomInRound = Math.max(0, trackedCombat ? perRoundMax : perRoundMax - systemGain);
   const roomTo7 = Math.max(0, 7 - actorEdge);
   const applied = Math.min(bonus.total, roomInRound, roomTo7);
 
